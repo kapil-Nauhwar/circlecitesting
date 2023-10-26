@@ -30,3 +30,4 @@ jobs:
     steps:
       - checkout
       - run: python testing.py
+      - run: python testing1.py
