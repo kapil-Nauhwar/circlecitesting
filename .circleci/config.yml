@@ -21,9 +21,12 @@ workflows:
 
 jobs:
   do-the-thing:
+    docker:
+      - image: cimg/python:3.11
     parameters:
       my_job_param:
         type: string
         default: "triggered by commit"
     steps:
-      - run: echo << parameters.my_job_param >>
+      - checkout
+      - run: python main.py
