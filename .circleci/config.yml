@@ -10,7 +10,15 @@ workflows:
   api-triggered-workflow:
     when: << pipeline.parameters.my_trigger_parameter >>
     jobs:
-    - do-the-thing:
+    - Test-Hold:
+        name: Test-Hold-<< matrix.requirements_file >>
+        type: approval
+        matrix:
+          parameters:
+            requirements_file: [ ]
+        requires:
+        - Layer-Build-<< matrix.requirements_file >>
+    - do-the-thing1:
         my_job_param: << pipeline.parameters.my_trigger_parameter >>
   # Workflow triggered only by pushing a commit to the repository
   commit-triggered-workflow:
@@ -31,3 +39,26 @@ jobs:
       - checkout
       - run: python testing.py
       - run: python testing1.py
+  do-the-thing1:
+    docker:
+      - image: cimg/python:3.11
+    parameters:
+      my_job_param:
+        type: string
+        default: "triggered by commit"
+    steps:
+      - checkout
+      - run: python testing.py
+      - run: 
+      name: run rollback job
+      command: |
+          curl --location --request POST 'https://circleci.com/api/v2/project/:vcs/:org/:repo/pipeline' \
+          --header 'Content-Type: application/json' \
+          -u "${CIRCLE_TOKEN}:" \
+          -d '{
+                        "parameters": {
+                          "rollback_job": true
+                        }
+                      }'
+
+
