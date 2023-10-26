@@ -16,10 +16,10 @@ workflows:
         matrix:
           parameters:
             requirements_file: [ ]
-        requires:
-        - Layer-Build-<< matrix.requirements_file >>
     - do-the-thing1:
         my_job_param: << pipeline.parameters.my_trigger_parameter >>
+        requires:
+        - Test-Hold-<< matrix.requirements_file >>
   # Workflow triggered only by pushing a commit to the repository
   commit-triggered-workflow:
     when:
@@ -41,13 +41,13 @@ jobs:
       - run: python testing1.py
   do-the-thing1:
     docker:
-      - image: cimg/python:3.11
+      - image: cimg/base:2020.01
     parameters:
       my_job_param:
         type: string
         default: "triggered by commit"
     steps:
-      - checkout
+      - run: echo "running rollback"
       - run: python testing.py
       # - run: 
       #   name: run rollback job
