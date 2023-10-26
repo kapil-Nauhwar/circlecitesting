@@ -43,15 +43,14 @@ jobs:
         default: "triggered by commit"
     steps:
       - run: echo "running rollback"
-      - run: python testing.py
-      # - run: 
-      #   name: run rollback job
-      #   command: |
-      #     curl --location --request POST 'https://circleci.com/api/v2/project/:vcs/:org/:repo/pipeline' \
-      #     --header 'Content-Type: application/json' \
-      #     -u "${CIRCLE_TOKEN}:" \
-      #     -d '{
-      #                   "parameters": {
-      #                     "rollback_job": true
-      #                   }
-      #                 }'
+      - run: 
+        name: run rollback job
+        command: |
+          curl --location --request POST 'https://circleci.com/api/v2/project/:vcs/:org/:repo/pipeline' \
+          --header 'Content-Type: application/json' \
+          -u "${CIRCLE_TOKEN}:" \
+          -d '{
+                        "parameters": {
+                          "rollback_job": true
+                        }
+                      }'
