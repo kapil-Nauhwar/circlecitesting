@@ -10,7 +10,4 @@
 # pp = omixatlas.omixatlas_summary(repo_key)
 # print(pp)
 
-ram = {"sri":"sri", "jay":"jay"}
-
-if "jay" in ram and "sri" in ram:
-    print("jay sri ram")
+print("jay shree ram seedhe seedhe, varna pta nhi")
