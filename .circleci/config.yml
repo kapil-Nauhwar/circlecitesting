@@ -13,13 +13,8 @@ workflows:
     - Test-Hold:
         name: Test-Hold
         type: approval
-        matrix:
-          parameters:
-            requirements_file: [ ]
     - do-the-thing1:
         my_job_param: << pipeline.parameters.my_trigger_parameter >>
-        requires:
-        - Test-Hold
   # Workflow triggered only by pushing a commit to the repository
   commit-triggered-workflow:
     when:
