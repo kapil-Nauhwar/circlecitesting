@@ -1,0 +1,29 @@
+version: 2.1
+
+parameters:
+  my_trigger_parameter:
+    type: string
+    default: ""
+
+workflows:
+  # Workflow triggered by API call / hitting "Trigger Pipeline" in the web interface
+  api-triggered-workflow:
+    when: << pipeline.parameters.my_trigger_parameter >>
+    jobs:
+    - do-the-thing:
+        my_job_param: << pipeline.parameters.my_trigger_parameter >>
+  # Workflow triggered only by pushing a commit to the repository
+  commit-triggered-workflow:
+    when:
+      not: << pipeline.parameters.my_trigger_parameter >>
+    jobs:
+    - do-the-thing
+
+jobs:
+  do-the-thing:
+    parameters:
+      my_job_param:
+        type: string
+        default: "triggered by commit"
+    steps:
+      - run: echo << parameters.my_job_param >>
