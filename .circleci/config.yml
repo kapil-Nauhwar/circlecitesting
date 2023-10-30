@@ -10,7 +10,10 @@ workflows:
   api-triggered-workflow:
     when: << pipeline.parameters.my_trigger_parameter >>
     jobs:
-    - do-the-thing:
+    - Test-Hold:
+        name: Test-Hold
+        type: approval
+    - do-the-thing1:
         my_job_param: << pipeline.parameters.my_trigger_parameter >>
   # Workflow triggered only by pushing a commit to the repository
   commit-triggered-workflow:
@@ -29,5 +32,28 @@ jobs:
         default: "triggered by commit"
     steps:
       - checkout
+      - run: git checkout 92ea8c
       - run: python testing.py
-      - run: python testing1.py
+      # - run: python testing1.py
+  do-the-thing1:
+    docker:
+      - image: cimg/python:3.11
+    parameters:
+      my_job_param:
+        type: string
+        default: "triggered by api"
+    steps:
+      - checkout
+      - run: git checkout << pipeline.parameters.my_trigger_parameter >>
+      - run: python testing.py
+      # - run: 
+      #   name: run rollback job
+      #   command: |
+      #     curl --location --request POST 'https://circleci.com/api/v2/project/:vcs/:org/:repo/pipeline' \
+      #     --header 'Content-Type: application/json' \
+      #     -u "${CIRCLE_TOKEN}:" \
+      #     -d '{
+      #                   "parameters": {
+      #                     "rollback_job": true
+      #                   }
+      #                 }'
