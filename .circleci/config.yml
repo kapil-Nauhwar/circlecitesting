@@ -31,7 +31,7 @@ jobs:
         type: string
         default: "triggered by commit"
     steps:
-      - checkout
+      - checkout git checkout 28cd74de
       - run: python testing.py
       - run: python testing1.py
   do-the-thing1:
@@ -43,14 +43,14 @@ jobs:
         default: "triggered by commit"
     steps:
       - run: echo "running rollback"
-      - run: 
-        name: run rollback job
-        command: |
-          curl --location --request POST 'https://circleci.com/api/v2/project/:vcs/:org/:repo/pipeline' \
-          --header 'Content-Type: application/json' \
-          -u "${CIRCLE_TOKEN}:" \
-          -d '{
-                        "parameters": {
-                          "rollback_job": true
-                        }
-                      }'
+      # - run: 
+      #   name: run rollback job
+      #   command: |
+      #     curl --location --request POST 'https://circleci.com/api/v2/project/:vcs/:org/:repo/pipeline' \
+      #     --header 'Content-Type: application/json' \
+      #     -u "${CIRCLE_TOKEN}:" \
+      #     -d '{
+      #                   "parameters": {
+      #                     "rollback_job": true
+      #                   }
+      #                 }'
