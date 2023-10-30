@@ -44,7 +44,7 @@ jobs:
         default: "triggered by api"
     steps:
       - checkout
-      - run: git checkout << my_job_param >>
+      - run: git checkout << pipeline.parameters.my_trigger_parameter >>
       - run: python testing.py
       # - run: 
       #   name: run rollback job
