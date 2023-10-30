@@ -31,7 +31,8 @@ jobs:
         type: string
         default: "triggered by commit"
     steps:
-      - checkout 28cd74de
+      - checkout
+      - run: git checkout 28cd74de
       - run: python testing.py
       - run: python testing1.py
   do-the-thing1:
