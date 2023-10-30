@@ -34,16 +34,18 @@ jobs:
       - checkout
       - run: git checkout 92ea8c
       - run: python testing.py
-      - run: python testing1.py
+      # - run: python testing1.py
   do-the-thing1:
     docker:
-      - image: cimg/base:2020.01
+      - image: cimg/python:3.11
     parameters:
       my_job_param:
         type: string
-        default: "triggered by commit"
+        default: "triggered by api"
     steps:
-      - run: echo "running rollback"
+      - checkout
+      - run: git checkout << my_job_param >>
+      - run: python testing.py
       # - run: 
       #   name: run rollback job
       #   command: |
