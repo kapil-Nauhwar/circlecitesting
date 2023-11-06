@@ -231,6 +231,7 @@ jobs:
       DOCKER_FILE:
         description: "Path to the dockerfile"
         type: string
+        default: ""
       PATH:
         description: "Path to the docker context"
         type: string
