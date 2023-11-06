@@ -395,7 +395,7 @@ def ecs_deployment():
                         f"Dev-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}"
                     ] = workflow["jobs"]["ecs-deploy"]
 
-                    workflow["jobs"][f"Dev-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}"]["parameters"]["DOCKER_FILE"] = str(dockerfile)
+                    # workflow["jobs"][f"Dev-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}"]["parameters"]["DOCKER_FILE"] = str(dockerfile)
 
                     jobs.append(
                         {
@@ -413,7 +413,6 @@ def ecs_deployment():
                                 "name": f"{env_name}-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}",
                                 "requires": 
                                     [f"{env_name}-Hold-{ecs_cluster_name}-{ecs_service_name}"],
-                                "parameters": {
                                     "ECS_CLUSTER": ecs_cluster_name,
                                     "ECS_SERVICE": ecs_service_name,
                                     "PROFILE": env,
@@ -422,7 +421,6 @@ def ecs_deployment():
                                     "DOCKER_CONTEXT": context,
                                     "ECR_IMAGE": ecr_image_name,
                                     "DOCKER_TAG": ecr_image_tag,
-                                },
                                 "filters": {"branches": {"only": allowed_branches}},
                             }
                         }
