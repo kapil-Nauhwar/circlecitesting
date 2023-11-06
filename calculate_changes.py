@@ -362,23 +362,23 @@ def ecs_deployment():
             workflow, file, encoding="utf-8", sort_keys=False, indent=2, width=20000
         )
 
-    # if env is None:
-    #     print("No deployment for this branch")
-    #     return
+    if env is None:
+        print("No deployment for this branch")
+        return
 
-    # # search for deployment files in allowed code paths
-    # for path in CODE_PATHS:
-    #     deployment_files = find_deployment_files(path)
-    #     for deployment_file in deployment_files:
-    #         with open(deployment_file, "r") as f:
-    #             deployments = dict(yaml.safe_load(f)["resources"])
+    # search for deployment files in allowed code paths
+    for path in CODE_PATHS:
+        deployment_files = find_deployment_files(path)
+        for deployment_file in deployment_files:
+            with open(deployment_file, "r") as f:
+                deployments = dict(yaml.safe_load(f)["resources"])
 
-    #         # filter only ecs deployments
-    #         ecs_deployments = list(filter(lambda x: x["type"] == "ecs", deployments.values()))
-    #         print(ecs_deployments)
+            # filter only ecs deployments
+            ecs_deployments = list(filter(lambda x: x["type"] == "ecs", deployments.values()))
+            print(ecs_deployments)
 
-    #         ecs_deployments = list(filter(filter_unchanged_deployments, ecs_deployments))
-    #         print(ecs_deployments)
+            ecs_deployments = list(filter(filter_unchanged_deployments, ecs_deployments))
+            print(ecs_deployments)
 
     #         with open(".circleci/workflow.yml", "r+") as file:
     #             workflow = yaml.safe_load(file)
