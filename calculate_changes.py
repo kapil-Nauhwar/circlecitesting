@@ -397,36 +397,37 @@ def ecs_deployment():
 
                     print(workflow["jobs"][f"Dev-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}"]["parameters"]["DOCKER_FILE"])
 
-    #                 jobs.append(
-    #                     {
-    #                         f"{env_name}-Hold-{ecs_cluster_name}-{ecs_service_name}": {
-    #                             "name": f"{env_name}-Hold-{ecs_cluster_name}-{ecs_service_name}",
-    #                             "type": "approval",
-    #                             "filters": {"branches": {"only": allowed_branches}},
-    #                         }
-    #                     }
-    #                 )
+                    jobs.append(
+                        {
+                            f"{env_name}-Hold-{ecs_cluster_name}-{ecs_service_name}": {
+                                "name": f"{env_name}-Hold-{ecs_cluster_name}-{ecs_service_name}",
+                                "type": "approval",
+                                "filters": {"branches": {"only": allowed_branches}},
+                            }
+                        }
+                    )
 
-    #                 jobs.append(
-    #                     {
-    #                         f"{env_name}-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}": {
-    #                             "name": f"{env_name}-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}",
-    #                             "requires": 
-    #                                 [f"{env_name}-Hold-{ecs_cluster_name}-{ecs_service_name}"],
-    #                             # "parameters": {
-    #                             #     "ECS_CLUSTER": ecs_cluster_name,
-    #                             #     "ECS_SERVICE": ecs_service_name,
-    #                             #     "PROFILE": env,
-    #                             #     "AWS_REGION": region,
-    #                             #     "DOCKER_FILE": dockerfile,
-    #                             #     "DOCKER_CONTEXT": context,
-    #                             #     "ECR_IMAGE": ecr_image_name,
-    #                             #     "DOCKER_TAG": ecr_image_tag,
-    #                             # },
-    #                             "filters": {"branches": {"only": allowed_branches}},
-    #                         }
-    #                     }
-    #                 )
+                    jobs.append(
+                        {
+                            f"{env_name}-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}": {
+                                "name": f"{env_name}-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}",
+                                "requires": 
+                                    [f"{env_name}-Hold-{ecs_cluster_name}-{ecs_service_name}"],
+                                "parameters": {
+                                    "ECS_CLUSTER": ecs_cluster_name,
+                                    "ECS_SERVICE": ecs_service_name,
+                                    "PROFILE": env,
+                                    "AWS_REGION": region,
+                                    "DOCKER_FILE": dockerfile,
+                                    "DOCKER_CONTEXT": context,
+                                    "ECR_IMAGE": ecr_image_name,
+                                    "DOCKER_TAG": ecr_image_tag,
+                                },
+                                "filters": {"branches": {"only": allowed_branches}},
+                            }
+                        }
+                    )
+                print(file)
                 file.seek(0)
                 file.truncate()
 
