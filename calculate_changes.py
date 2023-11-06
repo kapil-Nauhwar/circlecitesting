@@ -377,23 +377,23 @@ def ecs_deployment():
 
                 jobs = workflow["workflows"]["ecs-build-deploy"]["jobs"]
 
-    #             for ecs_deployment in ecs_deployments:
-    #                 ecs_cluster_name = str(ecs_deployment["cluster"]).replace("${DEPLOY_STAGE}", env)
-    #                 ecs_service_name = str(ecs_deployment["service"]).replace("${DEPLOY_STAGE}", env)
-    #                 dockerfile = ecs_deployment.get("dockerfile") or "Dockerfile"
-    #                 context = ecs_deployment["context"]
+                for ecs_deployment in ecs_deployments:
+                    ecs_cluster_name = str(ecs_deployment["cluster"]).replace("${DEPLOY_STAGE}", env)
+                    ecs_service_name = str(ecs_deployment["service"]).replace("${DEPLOY_STAGE}", env)
+                    dockerfile = ecs_deployment.get("dockerfile") or "Dockerfile"
+                    context = ecs_deployment["context"]
 
-    #                 ecr_image_name = (
-    #                     str(ecs_deployment["image"])
-    #                     .replace("${AWS_ACCOUNT_ID}", aws_account_id)
-    #                     .replace("${AWS_REGION}", region)
-    #                 )
-    #                 # .replace("${DEPLOY_STAGE}", env)
-    #                 ecr_image_tag = ecs_deployment.get("tag") or "latest"
+                    ecr_image_name = (
+                        str(ecs_deployment["image"])
+                        .replace("${AWS_ACCOUNT_ID}", aws_account_id)
+                        .replace("${AWS_REGION}", region)
+                    )
+                    # .replace("${DEPLOY_STAGE}", env)
+                    ecr_image_tag = ecs_deployment.get("tag") or "latest"
 
-    #                 workflow["jobs"][
-    #                     f"Dev-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}"
-    #                 ] = workflow["jobs"]["ecs-deploy"]
+                    workflow["jobs"][
+                        f"Dev-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}"
+                    ] = workflow["jobs"]["ecs-deploy"]
 
     #                 workflow["jobs"][f"Dev-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}"]["parameters"]["DOCKER_FILE"] = dockerfile
 
