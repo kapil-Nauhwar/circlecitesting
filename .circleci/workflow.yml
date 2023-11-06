@@ -1,0 +1,543 @@
+version: 2.1
+
+parameters:
+  run-code-build-deploy:
+    type: boolean
+    default: false
+  run-layer-build-deploy:
+    type: boolean
+    default: false
+  run-ci-test-pipeline:
+    type: boolean
+    default: false
+  run-ecs-build-deploy:
+    type: boolean
+    default: false
+  GHA_Actor:
+    type: string
+    default: ""
+  GHA_Action:
+    type: string
+    default: ""
+  GHA_Event:
+    type: string
+    default: ""
+  GHA_Meta:
+    type: string
+    default: ""
+
+defaults: &defaults
+  working_directory: ~/samvaad
+  docker:
+    - image: cimg/aws:2023.05
+  resource_class: small
+
+orbs:
+  # import CircleCI's aws-cli orb
+  aws-cli: circleci/aws-cli@3.1.5
+  aws-ecr: circleci/aws-ecr@9.0.1
+
+jobs:
+  Layer-Build:
+    <<: *defaults
+    docker:
+      - image: cimg/python:3.9
+    resource_class: small
+    parameters:
+      requirements_file:
+        description: "Path to the requirements.txt file"
+        type: string
+    steps:
+      - checkout
+
+      - attach_workspace:
+          at: ~/.
+
+      - run:
+          name: Layer Build
+          command: |
+            python3.9 make_lambda_layer.py $<< parameters.requirements_file >> -a x86_64 -d layers/<< parameters.requirements_file >>.zip -z
+
+      - persist_to_workspace:
+          root: ~/.
+          paths:
+            - .
+
+  layer-deploy: &layer-deploy
+    <<: *defaults
+    parameters:
+      requirements_file:
+        description: "Path to the requirements.txt file"
+        type: string
+      AWS_REGION:
+        type: env_var_name
+        default: DEV_AWS_REGION
+      AWS_CI_BUCKET:
+        type: string
+        default: DEV_AWS_CI_BUCKET
+      IAM_ROLE_ARN:
+        type: string
+        default: DEV_IAM_ROLE_ARN
+      PROFILE:
+        type: string
+        default: dev
+
+    steps:
+      - attach_workspace:
+          at: ~/.
+
+      - aws-cli/setup:
+          role-arn: $<< parameters.IAM_ROLE_ARN >>
+          aws-region: << parameters.AWS_REGION >>
+          # optional parameters
+          profile-name: << parameters.PROFILE >>
+          role-session-name: "circleci"
+          session-duration: "3600"
+
+      - run:
+          name: Store to bucket
+          command: |
+            aws s3 cp layers/<< parameters.requirements_file >>.zip s3://$<< parameters.AWS_CI_BUCKET >>/${CIRCLE_PROJECT_REPONAME}/lambda_layers/<< parameters.requirements_file >>.zip --profile << parameters.PROFILE >>
+
+      - run:
+          name: Layer Deploy On << parameters.requirements_file >>
+          command: |
+            aws_env='dev'
+            if [ $CIRCLE_BRANCH = 'master' ]
+            then
+              aws_env='prod'
+            elif [ $CIRCLE_BRANCH = 'staging' ]
+            then
+              aws_env='test'
+            fi
+            export aws_env
+            layer_name=<< parameters.requirements_file >>
+            layer_value=${!layer_name}
+            lambda_list=(`printenv | grep ${layer_value%'/'*} | grep -v '\.txt$' | awk -F "=" '{print $1}'| python3 -c "import sys; print(str(sys.stdin.read()).lower().replace('_','-'))" | awk -F "-" '$2 ~ ENVIRON["aws_env"] { print $0 }'`)
+
+            layer_name=${layer_name,,}
+            layer_name=${layer_name//_/-}
+            layer_arn=$(aws lambda publish-layer-version --layer-name $layer_name --region $<< parameters.AWS_REGION >> --content S3Bucket=$<< parameters.AWS_CI_BUCKET >>,S3Key=${CIRCLE_PROJECT_REPONAME}/lambda_layers/<< parameters.requirements_file >>.zip --profile << parameters.PROFILE >> | python3 -c "import json, sys; print (json.load(sys.stdin)['LayerVersionArn'])");
+
+            for lambda in "${lambda_list[@]}"
+            do
+              echo $lambda
+              aws lambda wait function-updated-v2 --function-name $lambda --region $<< parameters.AWS_REGION >> --profile << parameters.PROFILE >>
+              aws lambda update-function-configuration --function-name $lambda --region $<< parameters.AWS_REGION >> --layers $layer_arn --profile << parameters.PROFILE >>
+            done
+
+  Code-Build:
+    <<: *defaults
+    docker:
+      - image: cimg/python:3.9
+    resource_class: small
+    parameters:
+      lambdahandler:
+        description: "Path to the lambda handler file"
+        type: string
+
+    steps:
+      - checkout
+
+      - attach_workspace:
+          at: ~/.
+
+      #Install python3.9
+      - run:
+          name: Install python3.9
+          command: |
+            python3.9 -m pip install import_deps==0.2.0
+
+      - run:
+          name: Code Build
+          command: |
+            python3.9 make_lambda_package.py $<< parameters.lambdahandler >> -d packages/<< parameters.lambdahandler >>.zip
+
+      - persist_to_workspace:
+          root: ~/.
+          paths:
+            - .
+
+  code-deploy: &code-deploy
+    <<: *defaults
+    parameters:
+      lambdahandler:
+        description: "Path to the lambda handler file"
+        type: string
+      AWS_REGION:
+        type: env_var_name
+        default: DEV_AWS_REGION
+      AWS_CI_BUCKET:
+        type: string
+        default: DEV_AWS_CI_BUCKET
+      IAM_ROLE_ARN:
+        type: string
+        default: DEV_IAM_ROLE_ARN
+      PROFILE:
+        type: string
+        default: dev
+
+    steps:
+      - attach_workspace:
+          at: ~/.
+
+      - aws-cli/setup:
+          role-arn: $<< parameters.IAM_ROLE_ARN >>
+          aws-region: << parameters.AWS_REGION >>
+          # optional parameters
+          profile-name: << parameters.PROFILE >>
+          role-session-name: "circleci"
+          session-duration: "3600"
+
+      - run:
+          name: Store to bucket
+          command: |
+            aws s3 cp packages/<< parameters.lambdahandler >>.zip s3://$<< parameters.AWS_CI_BUCKET >>/${CIRCLE_PROJECT_REPONAME}/<< parameters.lambdahandler >>.zip --profile << parameters.PROFILE >>
+
+      - run:
+          name: Code Deploy On << parameters.lambdahandler >>
+          command: |
+            function_name=<< parameters.lambdahandler >>
+            function_name=${function_name,,}
+            function_name=${function_name//_/-}
+            aws lambda wait function-updated-v2 --function-name $function_name --region $<< parameters.AWS_REGION >> --profile << parameters.PROFILE >>
+            aws lambda update-function-code --region $<< parameters.AWS_REGION >> --function-name $function_name --s3-bucket $<< parameters.AWS_CI_BUCKET >> --s3-key ${CIRCLE_PROJECT_REPONAME}/<< parameters.lambdahandler >>.zip --profile << parameters.PROFILE >>
+
+  Prod-Code-Deploy:
+    <<: *code-deploy
+  Test-Code-Deploy:
+    <<: *code-deploy
+  Dev-Code-Deploy:
+    <<: *code-deploy
+  Prod-Layer-Deploy:
+    <<: *layer-deploy
+  Test-Layer-Deploy:
+    <<: *layer-deploy
+  Dev-Layer-Deploy:
+    <<: *layer-deploy
+
+  # ecs-deploy: &ecs-deploy
+  #   <<: *defaults
+  #   parameters:
+  #     AWS_REGION:
+  #       type: env_var_name
+  #       default: DEV_AWS_REGION
+  #     IAM_ROLE_ARN:
+  #       type: string
+  #       default: DEV_IAM_ROLE_ARN
+  #     PROFILE:
+  #       type: string
+  #       default: dev
+  #     DOCKER_FILE:
+  #       description: "Path to the dockerfile"
+  #       type: string
+  #     PATH:
+  #       description: "Path to the docker context"
+  #       type: string
+  #     ECR_IMAGE:
+  #       description: "ECR image name"
+  #       type: string
+  #     DOCKER_TAG:
+  #       description: "Docker tag"
+  #       type: string
+  #     ECS_CLUSTER:
+  #       description: "ECS cluster name"
+  #       type: string
+  #     ECS_SERVICE:
+  #       description: "ECS service name"
+  #       type: string
+
+  #   steps:
+  #     - attach_workspace:
+  #         at: ~/.
+
+  #     - aws-ecr/build_and_push_image:
+  #         attach_workspace: true
+  #         create_repo: false
+  #         auth:
+  #           - aws-cli/setup:
+  #             role-arn: $<< parameters.IAM_ROLE_ARN >>
+  #             aws-region: << parameters.AWS_REGION >>
+  #         dockerfile: << parameters.DOCKER_FILE >>
+  #         path: << parameters.PATH >>
+  #         platform: linux/amd64
+  #         push_image: true
+  #         region: $<< parameters.AWS_REGION >>
+  #         repo: << parameters.ECR_IMAGE >>
+  #         tag: latest
+  #         workspace_root: .
+
+  # Dev-ECS-Deploy:
+  #   <<: *ecs-deploy
+
+  Code-Test:
+    working_directory: ~/samvaad
+    machine:
+      image: ubuntu-2204:2023.02.1
+    resource_class: large
+    parameters:
+      services:
+        description: "Name of services to be tested"
+        type: string
+    steps:
+      - checkout # checkout to working directory
+      - run:
+          name: configure aws credentials
+          command: |
+            aws configure set aws_access_key_id $DEV_AWS_ACCESS_KEY_ID --profile dev
+            aws configure set aws_secret_access_key $DEV_AWS_SECRECT_KEY --profile dev
+      - run:
+          name: install python3.9 with required packages
+          command: |
+            sudo add-apt-repository ppa:deadsnakes/ppa -y
+            sudo apt install python3.9-dev python3.9-distutils libpq-dev -y
+            python3.9 -m pip install -r requirements.txt --progress-bar off
+            export PATH=$PATH:/home/circleci/.local/bin
+      - run:
+          name: install AWS SAM
+          command: |
+            wget https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
+            unzip -q aws-sam-cli-linux-x86_64.zip -d sam-installation
+            sudo ./sam-installation/install
+            sam --version
+      - run:
+          name: build lambda layer
+          command: python3.9 make_lambda_layer.py services/<< parameters.services >>/requirements.txt -a x86_64
+
+      - run:
+          name: trigger integration testing for << parameters.services >>
+          command: |
+            export SERVICE_NAME=<< parameters.services >>
+            export OPENAPI_PATH=open-api.yaml
+            cd services/<< parameters.services >>
+            python3.9 -m pytest -v tests/integration-testing.py --arch x86_64 --aws_profile dev -s
+
+workflows:
+  version: 2
+
+  code-build-deploy:
+    when: << pipeline.parameters.run-code-build-deploy >>
+
+    jobs:
+      - Code-Build:
+          name: Code-Build-<< matrix.lambdahandler >>
+          context: global-vars
+          matrix:
+            parameters:
+              lambdahandler: []
+          # requires:
+          # - Code-Test
+
+      - Dev-Hold:
+          name: Dev-Hold-<< matrix.lambdahandler >>
+          type: approval
+          matrix:
+            parameters:
+              lambdahandler: []
+          requires:
+            - Code-Build-<< matrix.lambdahandler >>
+          filters:
+            branches:
+              only:
+                - /.*_dev/
+                - develop
+
+      - Dev-Code-Deploy:
+          name: Dev-Code-Deploy-<< matrix.lambdahandler >>
+          context: global-vars
+          IAM_ROLE_ARN: DEV_IAM_ROLE_ARN
+          matrix:
+            parameters:
+              lambdahandler: []
+          requires:
+            - Dev-Hold-<< matrix.lambdahandler >>
+          filters:
+            branches:
+              only:
+                - /.*_dev/
+                - develop
+
+      - Test-Hold:
+          name: Test-Hold-<< matrix.lambdahandler >>
+          type: approval
+          matrix:
+            parameters:
+              lambdahandler: []
+          requires:
+            - Code-Build-<< matrix.lambdahandler >>
+          filters:
+            branches:
+              only: staging
+
+      - Test-Code-Deploy:
+          name: Test-Code-Deploy-<< matrix.lambdahandler >>
+          context: global-vars
+          IAM_ROLE_ARN: TEST_IAM_ROLE_ARN
+          AWS_REGION: TEST_AWS_REGION
+          AWS_CI_BUCKET: TEST_AWS_CI_BUCKET
+          PROFILE: test
+          matrix:
+            parameters:
+              lambdahandler: []
+          requires:
+            - Test-Hold-<< matrix.lambdahandler >>
+          filters:
+            branches:
+              only:
+                - staging
+
+      - Prod-Hold:
+          name: Prod-Hold-<< matrix.lambdahandler >>
+          type: approval
+          matrix:
+            parameters:
+              lambdahandler: []
+          requires:
+            - Code-Build-<< matrix.lambdahandler >>
+          filters:
+            branches:
+              only: master
+
+      - Prod-Code-Deploy:
+          name: Prod-Code-Deploy-<< matrix.lambdahandler >>
+          context: global-vars
+          IAM_ROLE_ARN: PROD_IAM_ROLE_ARN
+          AWS_REGION: PROD_AWS_REGION
+          AWS_CI_BUCKET: PROD_AWS_CI_BUCKET
+          PROFILE: prod
+          matrix:
+            parameters:
+              lambdahandler: []
+          requires:
+            - Prod-Hold-<< matrix.lambdahandler >>
+          filters:
+            branches:
+              only:
+                - master
+
+    # - Code-Test:
+    #    name: Code-Test
+    #    context: global-vars
+
+  layer-build-deploy:
+    when: << pipeline.parameters.run-layer-build-deploy >>
+
+    jobs:
+      - Layer-Build:
+          name: Layer-Build-<< matrix.requirements_file >>
+          context: global-vars
+          matrix:
+            parameters:
+              requirements_file: []
+
+      - Dev-Hold:
+          name: Dev-Hold-<< matrix.requirements_file >>
+          type: approval
+          matrix:
+            parameters:
+              requirements_file: []
+          requires:
+            - Layer-Build-<< matrix.requirements_file >>
+          filters:
+            branches:
+              only:
+                - /.*_dev/
+                - develop
+
+      - Dev-Layer-Deploy:
+          name: Dev-Layer-Deploy-<< matrix.requirements_file >>
+          context: global-vars
+          IAM_ROLE_ARN: DEV_IAM_ROLE_ARN
+          matrix:
+            parameters:
+              requirements_file: []
+          requires:
+            - Dev-Hold-<< matrix.requirements_file >>
+          filters:
+            branches:
+              only:
+                - /.*_dev/
+                - develop
+
+      - Test-Hold:
+          name: Test-Hold-<< matrix.requirements_file >>
+          type: approval
+          matrix:
+            parameters:
+              requirements_file: []
+          requires:
+            - Layer-Build-<< matrix.requirements_file >>
+          filters:
+            branches:
+              only: staging
+
+      - Test-Layer-Deploy:
+          name: Test-Layer-Deploy-<< matrix.requirements_file >>
+          context: global-vars
+          IAM_ROLE_ARN: TEST_IAM_ROLE_ARN
+          AWS_REGION: TEST_AWS_REGION
+          AWS_CI_BUCKET: TEST_AWS_CI_BUCKET
+          PROFILE: test
+          matrix:
+            parameters:
+              requirements_file: []
+          requires:
+            - Test-Hold-<< matrix.requirements_file >>
+          filters:
+            branches:
+              only:
+                - staging
+
+      - Prod-Hold:
+          name: Prod-Hold-<< matrix.requirements_file >>
+          type: approval
+          matrix:
+            parameters:
+              requirements_file: []
+          requires:
+            - Layer-Build-<< matrix.requirements_file >>
+          filters:
+            branches:
+              only: master
+
+      - Prod-Layer-Deploy:
+          name: Prod-Layer-Deploy-<< matrix.requirements_file >>
+          context: global-vars
+          IAM_ROLE_ARN: PROD_IAM_ROLE_ARN
+          AWS_REGION: PROD_AWS_REGION
+          AWS_CI_BUCKET: PROD_AWS_CI_BUCKET
+          PROFILE: prod
+          matrix:
+            parameters:
+              requirements_file: []
+          requires:
+            - Prod-Hold-<< matrix.requirements_file >>
+          filters:
+            branches:
+              only:
+                - master
+
+  ecs-build-deploy:
+    when: << pipeline.parameters.run-ecs-build-deploy >>
+
+    jobs:
+      - Dev-Hold:
+          name: Dev-Hold
+          type: approval
+          # filters:
+          #   branches:
+          #     only:
+          #       - develop
+          #       - /.*_dev/
+          #       - feature/ecs-cd
+
+  ci-test-pipeline:
+    when: << pipeline.parameters.run-ci-test-pipeline >>
+
+    jobs:
+      - Code-Test:
+          name: Code-Test-<< matrix.services >>
+          context: global-vars
+          matrix:
+            parameters:
+              services: []

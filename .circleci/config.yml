@@ -1,60 +1,50 @@
 version: 2.1
+setup: true
 
 parameters:
-  my_trigger_parameter:
+  GHA_Actor:
+    type: string
+    default: ""
+  GHA_Action:
+    type: string
+    default: ""
+  GHA_Event:
+    type: string
+    default: ""
+  GHA_Meta:
     type: string
     default: ""
 
-workflows:
-  # Workflow triggered by API call / hitting "Trigger Pipeline" in the web interface
-  api-triggered-workflow:
-    when: << pipeline.parameters.my_trigger_parameter >>
-    jobs:
-    - Test-Hold:
-        name: Test-Hold
-        type: approval
-    - do-the-thing1:
-        my_job_param: << pipeline.parameters.my_trigger_parameter >>
-  # Workflow triggered only by pushing a commit to the repository
-  commit-triggered-workflow:
-    when:
-      not: << pipeline.parameters.my_trigger_parameter >>
-    jobs:
-    - do-the-thing
+defaults: &defaults
+  working_directory: ~/samvaad
+  docker:
+    - image: cimg/python:3.9
+  resource_class: small
+orbs:
+  continuation: circleci/continuation@0.4.0
 
 jobs:
-  do-the-thing:
-    docker:
-      - image: cimg/python:3.11
-    parameters:
-      my_job_param:
-        type: string
-        default: "triggered by commit"
+  CalculateChanges:
+    <<: *defaults
     steps:
       - checkout
-      - run: git checkout test2
-      - run: git checkout 82a04b
-      - run: python test2.py
-      # - run: python testing1.py
-  do-the-thing1:
-    docker:
-      - image: cimg/python:3.11
-    parameters:
-      my_job_param:
-        type: string
-        default: "triggered by api"
-    steps:
-      - checkout
-      - run: git checkout << pipeline.parameters.my_trigger_parameter >>
-      - run: python testing.py
-      # - run: 
-      #   name: run rollback job
-      #   command: |
-      #     curl --location --request POST 'https://circleci.com/api/v2/project/:vcs/:org/:repo/pipeline' \
-      #     --header 'Content-Type: application/json' \
-      #     -u "${CIRCLE_TOKEN}:" \
-      #     -d '{
-      #                   "parameters": {
-      #                     "rollback_job": true
-      #                   }
-      #                 }'
+
+      - run:
+          name: Install python deps
+          command: |
+            python3.9 -m pip install import_deps==0.2.0 PyYAML requests
+
+      - run:
+          name: Identify Changes
+          command: |
+              python3.9 calculate_changes.py --branch develop  # for testing only
+
+      - continuation/continue:
+          configuration_path: .circleci/workflow.yml
+
+workflows:
+  version:
+  checking-file-changes:
+    jobs:
+      - CalculateChanges:
+          context: global-vars
