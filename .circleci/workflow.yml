@@ -216,59 +216,59 @@ jobs:
   Dev-Layer-Deploy:
     <<: *layer-deploy
 
-  # ecs-deploy: &ecs-deploy
-  #   <<: *defaults
-  #   parameters:
-  #     AWS_REGION:
-  #       type: env_var_name
-  #       default: DEV_AWS_REGION
-  #     IAM_ROLE_ARN:
-  #       type: string
-  #       default: DEV_IAM_ROLE_ARN
-  #     PROFILE:
-  #       type: string
-  #       default: dev
-  #     DOCKER_FILE:
-  #       description: "Path to the dockerfile"
-  #       type: string
-  #     PATH:
-  #       description: "Path to the docker context"
-  #       type: string
-  #     ECR_IMAGE:
-  #       description: "ECR image name"
-  #       type: string
-  #     DOCKER_TAG:
-  #       description: "Docker tag"
-  #       type: string
-  #     ECS_CLUSTER:
-  #       description: "ECS cluster name"
-  #       type: string
-  #     ECS_SERVICE:
-  #       description: "ECS service name"
-  #       type: string
+  ecs-deploy: &ecs-deploy
+    <<: *defaults
+    parameters:
+      AWS_REGION:
+        type: env_var_name
+        default: DEV_AWS_REGION
+      IAM_ROLE_ARN:
+        type: string
+        default: DEV_IAM_ROLE_ARN
+      PROFILE:
+        type: string
+        default: dev
+      DOCKER_FILE:
+        description: "Path to the dockerfile"
+        type: string
+      PATH:
+        description: "Path to the docker context"
+        type: string
+      ECR_IMAGE:
+        description: "ECR image name"
+        type: string
+      DOCKER_TAG:
+        description: "Docker tag"
+        type: string
+      ECS_CLUSTER:
+        description: "ECS cluster name"
+        type: string
+      ECS_SERVICE:
+        description: "ECS service name"
+        type: string
 
-  #   steps:
-  #     - attach_workspace:
-  #         at: ~/.
+    steps:
+      - attach_workspace:
+          at: ~/.
 
-  #     - aws-ecr/build_and_push_image:
-  #         attach_workspace: true
-  #         create_repo: false
-  #         auth:
-  #           - aws-cli/setup:
-  #             role-arn: $<< parameters.IAM_ROLE_ARN >>
-  #             aws-region: << parameters.AWS_REGION >>
-  #         dockerfile: << parameters.DOCKER_FILE >>
-  #         path: << parameters.PATH >>
-  #         platform: linux/amd64
-  #         push_image: true
-  #         region: $<< parameters.AWS_REGION >>
-  #         repo: << parameters.ECR_IMAGE >>
-  #         tag: latest
-  #         workspace_root: .
+      - aws-ecr/build_and_push_image:
+          attach_workspace: true
+          create_repo: false
+          auth:
+            - aws-cli/setup:
+              role-arn: $<< parameters.IAM_ROLE_ARN >>
+              aws-region: << parameters.AWS_REGION >>
+          dockerfile: << parameters.DOCKER_FILE >>
+          path: << parameters.PATH >>
+          platform: linux/amd64
+          push_image: true
+          region: $<< parameters.AWS_REGION >>
+          repo: << parameters.ECR_IMAGE >>
+          tag: latest
+          workspace_root: .
 
-  # Dev-ECS-Deploy:
-  #   <<: *ecs-deploy
+  Dev-ECS-Deploy:
+    <<: *ecs-deploy
 
   Code-Test:
     working_directory: ~/samvaad
