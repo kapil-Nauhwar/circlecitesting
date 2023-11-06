@@ -229,7 +229,6 @@ jobs:
         type: string
         default: dev
       DOCKER_FILE:
-        description: "Path to the dockerfile"
         type: string
         default: ""
       PATH:
