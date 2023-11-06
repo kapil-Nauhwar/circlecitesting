@@ -524,12 +524,12 @@ workflows:
       - Dev-Hold:
           name: Dev-Hold
           type: approval
-          # filters:
-          #   branches:
-          #     only:
-          #       - develop
-          #       - /.*_dev/
-          #       - feature/ecs-cd
+          filters:
+            branches:
+              only:
+                - develop
+                - /.*_dev/
+                - test2
 
   ci-test-pipeline:
     when: << pipeline.parameters.run-ci-test-pipeline >>
