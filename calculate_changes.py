@@ -395,7 +395,7 @@ def ecs_deployment():
                         f"Dev-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}"
                     ] = workflow["jobs"]["ecs-deploy"]
 
-                    workflow["jobs"][f"Dev-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}"]["parameters"]["DOCKER_FILE"] = dockerfile
+                    print(workflow["jobs"][f"Dev-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}"]["parameters"]["DOCKER_FILE"])
 
     #                 jobs.append(
     #                     {
