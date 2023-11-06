@@ -353,15 +353,6 @@ def ecs_deployment():
 
     print(get_git_diff(branch_name))
 
-    with open(".circleci/workflow.yml", "r+") as file:
-        workflow = yaml.safe_load(file)
-        workflow["parameters"]["run-ecs-build-deploy"]["default"] = True
-        file.seek(0)
-        file.truncate()
-        yaml.safe_dump(
-            workflow, file, encoding="utf-8", sort_keys=False, indent=2, width=20000
-        )
-
     if env is None:
         print("No deployment for this branch")
         return
@@ -380,11 +371,11 @@ def ecs_deployment():
             ecs_deployments = list(filter(filter_unchanged_deployments, ecs_deployments))
             print(ecs_deployments)
 
-    #         with open(".circleci/workflow.yml", "r+") as file:
-    #             workflow = yaml.safe_load(file)
-    #             workflow["parameters"]["run-ecs-build-deploy"]["default"] = True
+            with open(".circleci/workflow.yml", "r+") as file:
+                workflow = yaml.safe_load(file)
+                workflow["parameters"]["run-ecs-build-deploy"]["default"] = True
 
-    #             jobs = workflow["workflows"]["ecs-build-deploy"]["jobs"]
+                jobs = workflow["workflows"]["ecs-build-deploy"]["jobs"]
 
     #             for ecs_deployment in ecs_deployments:
     #                 ecs_cluster_name = str(ecs_deployment["cluster"]).replace("${DEPLOY_STAGE}", env)
@@ -436,12 +427,12 @@ def ecs_deployment():
     #                         }
     #                     }
     #                 )
-    #             file.seek(0)
-    #             file.truncate()
+                file.seek(0)
+                file.truncate()
 
-    #             yaml.safe_dump(
-    #                 workflow, file, encoding="utf-8", sort_keys=False, indent=2, width=20000
-    #             )
+                yaml.safe_dump(
+                    workflow, file, encoding="utf-8", sort_keys=False, indent=2, width=20000
+                )
                 # testfile = open("test.yml", "r+")
 
 def main():
