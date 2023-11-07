@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 
 import requests
 import yaml
+from import_deps import ast_imports
 
 CODE_PATHS = [
     "services",
@@ -341,6 +342,7 @@ def find_deployment_files(path: str) -> list[str]:
 def filter_unchanged_deployments(deployment: dict) -> bool:
     branch_name = os.environ.get("CIRCLE_BRANCH")
     git_change_set = get_git_diff(branch_name)
+    visited.clear()
 
     if not deployment.get("context"):
         return False
@@ -350,8 +352,67 @@ def filter_unchanged_deployments(deployment: dict) -> bool:
     
     if deployment.get("requirements") in git_change_set:
         return True
+    
+    visit(deployment.get("handler"))
+
+    if visited & git_change_set:
+        return True
 
     return False
+
+visited = set()
+
+
+def visit(file_path):
+    """
+    Traverses the tree of imports in PostOrder DFS and creates a list of files.
+    """
+    if file_path in visited:
+        return
+    visited.add(file_path)
+    with open(file_path, "r") as f:
+        lines = f.readlines()
+        for line in lines:
+            if "@request_response_validator" in line:
+                result = re.search('"(.*)"', line)
+                if result:
+                    visited.add(result.group(1))
+    imports = ast_imports(file_path)
+    imports = [
+        (impor[0], impor[1])
+        for impor in imports
+        if (impor[1] and ("commons" in impor[1] or "services" in impor[1]))
+        or (impor[0] and ("commons" in impor[0] or "services" in impor[0]))
+    ]
+
+    for impor in imports:
+        if impor[0]:
+            prev = ""
+            for directory in impor[0].split("."):
+                if os.path.isfile(prev + directory + "/__init__.py"):
+                    visit(prev + directory + "/__init__.py")
+                elif os.path.isfile(prev + directory + ".py"):
+                    visit(prev + directory + ".py")
+                else:
+                    pass
+                prev = prev + directory + "/"
+
+            if os.path.isfile(prev + impor[1] + "/__init__.py"):
+                visit(prev + impor[1] + "/__init__.py")
+
+            if os.path.isfile(prev + impor[1] + ".py"):
+                visit(prev + impor[1] + ".py")
+        else:
+            prev = ""
+            for directory in impor[1].split("."):
+                if os.path.isfile(prev + directory + "/__init__.py"):
+                    visit(prev + directory + "/__init__.py")
+                elif os.path.isfile(prev + directory + ".py"):
+                    visit(prev + directory + ".py")
+                else:
+                    pass
+                prev = prev + directory + "/"
+    visited.add(file_path)
 
 def ecs_deployment():
     branch_name = os.environ.get("CIRCLE_BRANCH")
