@@ -31,7 +31,7 @@ ENV_AWS_ACCOUNT_IDS = {
     "prod": "381719257168",
 }
 
-ENV_ALLOWED_BRANCHES = {"dev": ["develop", "/.*_dev/"], "test": ["staging"], "prod": ["master"]}
+ENV_ALLOWED_BRANCHES = {"dev": ["develop", "/.*_dev/", "test2"], "test": ["staging"], "prod": ["master"]}
 
 
 def find_pr_changes(pr: str):
