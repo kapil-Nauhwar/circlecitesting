@@ -31,7 +31,7 @@ ENV_AWS_ACCOUNT_IDS = {
     "prod": "381719257168",
 }
 
-ENV_ALLOWED_BRANCHES = {"dev": ["develop", "/.*_dev/", "test2"], "test": ["staging"], "prod": ["master"]}
+ENV_ALLOWED_BRANCHES = {"dev": ["develop", "/.*_dev/", "test2", "feature/ecs-cd"], "test": ["staging"], "prod": ["master"]}
 
 
 def find_pr_changes(pr: str):
@@ -338,10 +338,19 @@ def find_deployment_files(path: str) -> list[str]:
     return deployment_files
 
 def filter_unchanged_deployments(deployment: dict) -> bool:
+    branch_name = os.environ.get("CIRCLE_BRANCH")
+    git_change_set = get_git_diff(branch_name)
+
     if not deployment.get("context"):
         return False
+    
+    if deployment.get("dockerfile") and not deployment.get("handler"):
+        return True
+    
+    if deployment.get("requirements") in git_change_set:
+        return True
 
-    return True
+    return False
 
 def ecs_deployment():
     branch_name = os.environ.get("CIRCLE_BRANCH")
@@ -413,14 +422,14 @@ def ecs_deployment():
                                 "name": f"{env_name}-ECS-Deploy-{ecs_cluster_name}-{ecs_service_name}",
                                 "requires": 
                                     [f"{env_name}-Hold-{ecs_cluster_name}-{ecs_service_name}"],
-                                    "ECS_CLUSTER": ecs_cluster_name,
-                                    "ECS_SERVICE": ecs_service_name,
-                                    "PROFILE": env,
-                                    "AWS_REGION": region,
-                                    "DOCKER_FILE": dockerfile,
-                                    "PATH": context,
-                                    "ECR_IMAGE": ecr_image_name,
-                                    "DOCKER_TAG": ecr_image_tag,
+                                "ECS_CLUSTER": ecs_cluster_name,
+                                "ECS_SERVICE": ecs_service_name,
+                                "PROFILE": env,
+                                "AWS_REGION": region,
+                                "DOCKER_FILE": dockerfile,
+                                "PATH": context,
+                                "ECR_IMAGE": ecr_image_name,
+                                "DOCKER_TAG": ecr_image_tag,
                                 "filters": {"branches": {"only": allowed_branches}},
                             }
                         }
