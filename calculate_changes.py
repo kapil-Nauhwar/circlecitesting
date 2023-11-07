@@ -381,8 +381,8 @@ def visit(file_path):
     imports = [
         (impor[0], impor[1])
         for impor in imports
-        if (impor[1] and ("commons" in impor[1] or "services" in impor[1]))
-        or (impor[0] and ("commons" in impor[0] or "services" in impor[0]))
+        if (impor[1] and ("commons" in impor[1] or "services" in impor[1] or "example" in impor[1]))
+        or (impor[0] and ("commons" in impor[0] or "services" in impor[0] or "example" in impor[0]))
     ]
 
     for impor in imports:
