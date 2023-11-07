@@ -20,7 +20,7 @@ ENV_NAMES = {
 }
 
 ENV_REGIONS = {
-    "dev": "ap-southeast-1",
+    "dev": "DEV_AWS_REGION",
     "test": "ap-southeast-1",
     "prod": "ap-southeast-1",
 }
