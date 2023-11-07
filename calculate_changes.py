@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 
 import requests
 import yaml
+import re
 from import_deps import ast_imports
 
 CODE_PATHS = [
