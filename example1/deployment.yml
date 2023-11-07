@@ -2,11 +2,11 @@ resources:
   test-resource:
     name: Deploy to ECS # optional
     type: ecs # required
-    cluster: dummy-${DEPLOY_STAGE}-service-cluster-v2 # required
+    cluster: dummy-${DEPLOY_STAGE}-service-cluster-v1 # required
     service: dummy-${DEPLOY_STAGE}-run-state-notifier-v1 # required
     dockerfile: Dockerfile # optional
-    context: example/ecs_deployment # required
+    context: example1/ecs_deployment1 # required
     tag: latest # optional
-    handler: example/ecs_deployment/handler.py # optional
-    requirements: example/ecs_deployment/requirements.txt # optional
+    handler: example1/ecs_deployment1/handler.py # optional
+    requirements: example1/ecs_deployment1/requirements.txt # optional
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/dummyservice # required

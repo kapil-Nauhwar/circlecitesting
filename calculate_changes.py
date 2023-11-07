@@ -9,6 +9,7 @@ import yaml
 CODE_PATHS = [
     "services",
     "example",
+    "example1"
 ]
 
 BRANCH_ENV = {"develop": "dev", "staging": "test", "master": "prod"}
