@@ -418,7 +418,7 @@ def ecs_deployment():
                                     "PROFILE": env,
                                     "AWS_REGION": region,
                                     "DOCKER_FILE": dockerfile,
-                                    "DOCKER_CONTEXT": context,
+                                    "PATH": context,
                                     "ECR_IMAGE": ecr_image_name,
                                     "DOCKER_TAG": ecr_image_tag,
                                 "filters": {"branches": {"only": allowed_branches}},
