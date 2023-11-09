@@ -354,14 +354,19 @@ def filter_unchanged_deployments(deployment: dict) -> bool:
     if deployment.get("requirements") in git_change_set:
         return True
     
-    visit(deployment.get("handler"))
+    file_visit = previsit(deployment.get("handler"))
 
-    if visited & git_change_set:
+    if file_visit & git_change_set:
         return True
 
     return False
 
 visited = set()
+
+def previsit(file_path):
+    visit(file_path)
+    return visited
+    
 
 
 def visit(file_path):
