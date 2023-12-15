@@ -10,4 +10,4 @@
 # pp = omixatlas.omixatlas_summary(repo_key)
 # print(pp)
 
-print("jay shree ram seedhe seedhe, varna pta nhi")
+print("i am in testing")
